@@ -1,0 +1,187 @@
+---
+title: "Micro Capstone"
+author: "Scott Waugh"
+output:
+  html_document:
+    df_print: paged
+---
+
+Read in excel sheet with data from baseball reference from 1969 to 2021 with about 162 games (excluding 1981, 1994, 1995, and 2020) and removing random rows that show up
+
+```{r}
+baseball = read.table("BaseballCapstoneData.csv", header = TRUE, sep=",")
+baseball$X = NULL
+baseball$X.1 = NULL
+baseball$X.2 = NULL
+baseball$X.3 = NULL
+baseball$X.4 = NULL
+baseball$X.5 = NULL
+```
+
+ Run the full model looking at response variable y with all the variables
+ 
+```{r}
+startmodel = lm(W ~ BatAge + RG + R + H + SB + TB + HR + RBI + SB + CS + BB + SO + BA + OBP + SLG + OPS + PAge + RAG + ERA + CG + tSho+ cSho + SV + HA + RA + ER + HRA + BBA + SOA + FIP + WHIP, data = baseball)
+
+summary(startmodel)
+```
+ 
+ Run stepwise to find best model
+ 
+```{r}
+require(MASS)
+min_model = lm(W ~ 1, data = baseball)
+max_model = formula(W ~ BatAge + RG + R + H + SB + TB + HR + RBI + SB + CS + BB + SO + BA + OBP + SLG + OPS + PAge + RAG + ERA + CG + tSho+ cSho + SV + HA + RA + ER + HRA + BBA + SOA + FIP + WHIP, data = baseball)
+best_model = step(min_model, direction = "both", scope = max_model)
+```
+ 
+ run new stepwise model
+ 
+```{r}
+stepwiseModel = lm(W ~ WHIP + R + RAG + SV + CG + tSho + OBP + BatAge + HA + BBA + 
+    HR + H + BA + CS + SO + BB + FIP, data = baseball)
+
+summary(stepwiseModel)
+```
+ 
+ run test for collinearity 
+ 
+```{r}
+require(regclass)
+stepwiseModel = lm(W ~ WHIP + R + RAG + SV + CG + tSho + OBP + BatAge + HA + BBA + 
+    HR + H + BA + CS + SO + BB + FIP, data = baseball)
+VIF(stepwiseModel)
+```
+ 
+make small data frame for correlation matrix
+
+```{r}
+baseballNew <- baseball[, colnames(baseball)[c(3,7,9,10,13,16,17,18,19,20,24,26,27,29,30,34,36,37)]]
+```
+ 
+run correlation matrix
+ 
+```{r}
+round(cor(baseballNew),3)
+```
+
+Model after removing collinerarity 
+
+```{r}
+require(regclass)
+modelfinal = lm(W ~ WHIP + SV + tSho + OBP + BatAge + 
+    HR + CS + SO + BB + FIP, data = baseball)
+VIF(modelfinal)
+summary(modelfinal)
+```
+remove batters age since not significant
+
+```{r}
+modelfinal = lm(W ~ WHIP + SV + tSho + OBP + 
+    HR + CS + SO + BB + FIP, data = baseball)
+summary(modelfinal)
+```
+
+predict wins with formula
+
+```{r}
+baseball$Pred = predict(modelfinal, baseball)
+```
+
+ calculate residuals and plot
+ 
+```{r}
+baseball$Residuals = residuals(modelfinal)
+plot(baseball$W, baseball$Residuals, xlab = "Wins", ylab = "Residual")  
+abline(a=0, b=0)
+hist(baseball$Residuals, xlab = "Residuals")
+qqnorm(baseball$Residuals)
+qqline(baseball$Residuals)
+```
+ Start over using 2011-2021 excluding 2020 and see if there is any difference 
+ 
+```{r, echo=FALSE}
+baseball10years = read.table("BaseballCapstoneData10Years.csv", header = TRUE, sep=",")
+baseball10years$X = NULL
+baseball10years$X.1 = NULL
+baseball10years$X.2 = NULL
+baseball10years$X.3 = NULL
+baseball10years$X.4 = NULL
+baseball10years$X.5 = NULL
+```
+
+ Run the full model looking at response variable y with all the variables
+ 
+```{r, echo=FALSE}
+startmodel = lm(W ~ BatAge + RG + R + H + SB + TB + HR + RBI + SB + CS + BB + SO + BA + OBP + SLG + OPS + PAge + RAG + ERA + CG + tSho+ cSho + SV + HA + RA + ER + HRA + BBA + SOA + FIP + WHIP, data = baseball10years)
+
+summary(startmodel)
+```
+ 
+ Run stepwise to find best model
+ 
+```{r}
+require(MASS)
+min_model = lm(W ~ 1, data = baseball10years)
+max_model = formula(W ~ BatAge + RG + R + H + SB + TB + HR + RBI + SB + CS + BB + SO + BA + OBP + SLG + OPS + PAge + RAG + ERA + CG + tSho+ cSho + SV + HA + RA + ER + HRA + BBA + SOA + FIP + WHIP, data = baseball10years)
+best_model = step(min_model, direction = "both", scope = max_model)
+```
+ 
+run new stepwise model and check for collinerarity
+ 
+```{r}
+require(regclass)
+stepwiseModel = lm(W ~ WHIP + R + RAG + SV + tSho + CG + BBA + HA + CS + BB + H + 
+    BA + HRA + RBI, data = baseball10years)
+
+summary(stepwiseModel)
+VIF(stepwiseModel)
+```
+
+make small data frame for correlation matrix
+
+```{r}
+baseball10New <- baseball10years[, colnames(baseball10years)[c(3,9,10,14,16,17,19,24,26,27,29,30,33,34,37)]] 
+```
+ 
+run correlation matrix
+ 
+```{r}
+round(cor(baseball10New),3)
+```
+
+Model after removing collinerarity
+
+```{r}
+require(regclass)
+modelfinal10 = lm(W ~ WHIP + SV + tSho + CG + BBA + CS + 
+    BA + HRA + RBI, data = baseball10years)
+VIF(modelfinal10)
+summary(modelfinal10)
+```
+
+remove CS and BA since not significant
+
+```{r}
+modelfinal10 = lm(W ~ WHIP + SV + tSho + CG + BBA + HRA + RBI, data = baseball10years)
+summary(modelfinal10)
+```
+
+predict wins with formula
+
+```{r}
+baseball10years$Pred = predict(modelfinal10, baseball10years)
+```
+
+calculate residuals and plot
+ 
+```{r}
+baseball10years$Residuals = residuals(modelfinal10)
+plot(baseball10years$W, baseball10years$Residuals, xlab = "Wins", ylab = "Residual")  
+abline(a=0, b=0)
+hist(baseball10years$Residuals, xlab = "Residuals")
+qqnorm(baseball10years$Residuals)
+qqline(baseball10years$Residuals)
+```
+
+
